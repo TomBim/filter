@@ -4,12 +4,13 @@ project(filter)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(filter main.cpp)
+add_executable(simulador main.cpp)
 
-target_include_directories(filter PRIVATE ${CMAKE_SOURCE_DIR}/simulator)
+target_include_directories(simulador PRIVATE ${CMAKE_SOURCE_DIR}/simulator)
 
-find_package(Eigen3 REQUIRED)
-target_link_libraries(filter Eigen3)
+list(APPEND CMAKE_INCLUDE_PATH "/usr/local/include/eigen3")
+find_package(Eigen3 3.4 REQUIRED NO_MODULE)
+#target_link_libraries(simulador Eigen3)
 
 
-install(TARGETS filter DESTINATION ${CMAKE_SOURCE_DIR}/bin)
+install(TARGETS simulador DESTINATION ${CMAKE_SOURCE_DIR}/bin)
