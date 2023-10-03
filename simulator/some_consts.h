@@ -6,6 +6,8 @@
 static const double PI = 3.1415926536;
 static const double deg2rad = PI / 180;
 
+/* @todo fix the values */
+
 
 /***** SIMULATION'S PROPERTIES *****/
 static const double Fs = 1000;      // sample rate (Hz)
