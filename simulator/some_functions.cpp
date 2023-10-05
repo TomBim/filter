@@ -24,19 +24,17 @@ void progressBar(float progress) {
     }
 }
 
-void logger(const std::string fileName, Eigen::VectorXd* data) {
-/*    std::ofstream logFile(fileName);
+// void logger(const std::string fileName, const std::vector<Eigen::Vector4d> data, Eigen::) {
+// /*    std::ofstream logFile(fileName);
 
-    if(!logFile.is_open())
-        return;
-  */
- std::cout << data << std::endl;  
+//     if(!logFile.is_open())
+//         return;
+//   */
+//     std::ofstream file(fileName);
+//     int dataSize = data.size();
+//     Eigen::IOFormat eigenIOFormat() 
+//     for(int i = 0; i < dataSize; i++)
+//         file << data.at(i).format()
     
-}
 
-void logEigenVector(const auto vec, const std::ofstream logFile, const std::string style) {
-}
-    
-
-
-
+// }

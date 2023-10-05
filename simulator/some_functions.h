@@ -8,6 +8,4 @@
 
 void progressBar(float progress);
 
-void logger(const std::string fileName, Eigen::VectorXd &data);
-
 #endif
