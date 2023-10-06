@@ -45,6 +45,7 @@ static const double eta = 0.9;      // reduction's efficiency
 /***** CONTROLLER'S PROPERTIES *****/
 static const double CONTROL_P = 2;
 static const double CONTROL_D = 0.2;
+static const double CONTROL_I = 0;
 
 /***** CALCULATING MATRIXES *****/
 static const double Beq = Bm * N*N * eta + Bw;
@@ -55,6 +56,6 @@ static const Eigen::Matrix<double, 3, 4> rMplus;    // wheels velocities -> robo
 static const Eigen::Matrix4d Cv;
 static const Eigen::Matrix4d H;
 static const Eigen::Matrix4d F, Finv;
-static const Eigen::Matrix4d A, B, C;
+static const Eigen::Matrix4d A, B, Binv, C;
 
 #endif
