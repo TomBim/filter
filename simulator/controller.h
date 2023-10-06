@@ -6,18 +6,18 @@
 
 class Controller{
     private:
-        double P = 1;
-        double I = 1;
         Eigen::Vector4d errorSum;
+        Eigen::Vector4d lastError;
+        bool hasP, hasI, hasD;
 
     public:
-        Controller(double P, double I);
+        Controller();
 
         ~Controller();
 
-        Eigen::Vector4d applyController(Eigen::Vector4d wheelsAngSpeed, Eigen::Vector4d wheelsAngSpeedCommand);
+        Eigen::Vector4d applyController(const Eigen::Vector4d &wheelsAngSpeed, const Eigen::Vector4d &wheelsAngSpeedCommand);
 
-        void resetController();        
+        void resetController();
 };
 
 #endif
