@@ -23,9 +23,13 @@ class Robot{
         Eigen::Vector4d registerEncodersRead();
 
     public:
+        Robot();
+
         Robot(double stdDevNoise);
 
         ~Robot();
+
+        void resetRobot();
 
         Eigen::Vector4d getLastEncodersRead() const;
 
