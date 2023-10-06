@@ -15,6 +15,9 @@ const Eigen::Matrix4d H = (Eigen::Matrix4d() <<
             Iop,        Iadj,       Id+Jeq,     Iadj,
             Iadj,       Iop,        Iadj,       Id+Jeq).finished();
 
+const Eigen::Matrix4d F = - H.inverse() * Cv;
+const Eigen::Matrix4d Finv = F.inverse();
+
 const Eigen::Matrix4d A = (- Ts * H.inverse() * Cv).exp();
 const Eigen::Matrix4d B = (N * eta * K / R) * Cv;
 const Eigen::Matrix4d C = Eigen::Matrix4d::Identity();

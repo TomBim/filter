@@ -42,13 +42,19 @@ static const double rad2counts = 1 / counts2rad;        // encoder's counts per 
 static const double N = 3.0;         // reduction factor
 static const double eta = 0.9;      // reduction's efficiency
 
+/***** CONTROLLER'S PROPERTIES *****/
+static const double CONTROL_P = 2;
+static const double CONTROL_D = 0.2;
+
 /***** CALCULATING MATRIXES *****/
 static const double Beq = Bm * N*N * eta + Bw;
 static const double Jeq = Jm * N*N * eta + Jw;
-static const Eigen::Matrix<double, 4, 3> M;    
-static const Eigen::Matrix<double, 3, 4> rMplus;   // wheels velocities -> robot velocities
+static const Eigen::Matrix<double, 4, 3> M;         // robot velocities -> wheels velocities * wheels' radius
+static const Eigen::Matrix<double, 4, 3> M_over_r = M / WHEEL_RADIUS;   // robot velocities -> wheels velocities
+static const Eigen::Matrix<double, 3, 4> rMplus;    // wheels velocities -> robot velocities
 static const Eigen::Matrix4d Cv;
 static const Eigen::Matrix4d H;
+static const Eigen::Matrix4d F, Finv;
 static const Eigen::Matrix4d A, B, C;
 
 #endif
