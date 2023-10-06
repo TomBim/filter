@@ -11,6 +11,7 @@
 
 #include "robot.h"
 #include "spd_types.h"
+#include "../consts/some_consts.h"
 
 enum class commandSignal{ Constant, Line, Triangular };
 
