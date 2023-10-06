@@ -1,50 +1,99 @@
 #include "robot.h"
 
 Robot::Robot(double stdDevNoise) {
+    controller = new Controller();
+    noise = stdDevNoise;
+    resetRobot();
+}
+
+Robot::Robot() {
+    controller = new Controller();
+    noise = 0;
+    resetRobot();
+}
+
+Robot::~Robot() {}
+
+void Robot::resetRobot() {
+    // set velocities = 0
     robotSpd.setZero();
     robotSpdCmd.setZero();
     wheelsAngSpd.setZero();
     wheelsAngSpdCmd.setZero();
-    noise = stdDevNoise;
-    controller = new Controller(P, I);
+
+    // reset motor's position
     motorPosition.setZero();
-    lastVoltageCmd.setZero();
-    stepsTilControl = 0;
+
+    // reset controller
+    controller->resetController();
+    
+    // reset voltage cmd
+    lastVoltageCmd.setZero();   // @todo is this rly necessary?
 }
 
-Robot::~Robot() {};
+Eigen::Vector4d Robot::getLastEncodersRead() const {
+    return lastEncodersRead;
+};
 
-Eigen::Vector4d Robot::readSensors() {
-    Eigen::Vector4i counter;
-    counter = motorPosition / motorDivSize;
-    Eigen::Vector4d deltaTheta;
-    deltaTheta = ((Eigen::Vector4d) counter) * motorDivSize;
-    motorPosition -= deltaTheta;    // don't need to think if it's negative or positive
-    return deltaTheta * fs;
+Eigen::Vector4d Robot::getWheelsTrueSpd() const {
+    return wheelsAngSpd;
+}
+
+Eigen::Vector3d Robot::estimateRobotsSpd() const {
+    return rMplus * lastEncodersRead;
+}
+
+Eigen::Vector3d Robot::getRobotsTrueSpd() const {
+    return rMplus * wheelsAngSpd;
+}
+
+Eigen::Vector4d Robot::registerEncodersRead() {
+    Eigen::Vector4i counts;
+    counts = motorPosition * rad2counts;
+    Eigen::Vector4d deltaThetaCounted;
+    deltaThetaCounted = ((Eigen::Vector4d) counts) * counts2rad;
+    motorPosition -= deltaThetaCounted;    // don't need to think if it's negative or positive
+    lastEncodersRead =  deltaThetaCounted * Fs;
+    return lastEncodersRead;
 }
 
 void Robot::applyController() {
-    lastVoltageCmd = controller->applyController(readSensors(), wheelsAngSpdCmd);
+    lastVoltageCmd = controller->applyController(getLastEncodersRead(), wheelsAngSpdCmd);
 }
 
 
-void Robot::updateRobotStatus() {
-    /// TODO: need to use the constraints here
-    /// TODO: this 'decrease' is really necessary?
-    if(stepsTilControl == 0) {
-        applyController();
-        stepsTilControl = nStepsBetweenUsingController; // we will decrease one after
-    }
-    Eigen::Vector4d wheelsAngAcceleration = angSpdCmd2Voltage.inverse() * lastVoltageCmd;
-    motorPosition = motorPosition + wheelsAngSpd / fUpdateRobot + 
-        wheelsAngAcceleration / fUpdateRobot / fUpdateRobot / 2;
-    wheelsAngSpd += wheelsAngAcceleration / fUpdateRobot;
+void Robot::updateRobotStatus(const Eigen::Vector4d &wheelsAngSpdCmd) {
+    // first, let's apply the controller
+    this->wheelsAngSpdCmd = wheelsAngSpdCmd;
+    applyController();
 
-    stepsTilControl--;       
+    /************************************************************************************
+    * OBS:                                                                              *
+    *   vw(t) = exp[F.(t-t0)].vw0 + lambda ->                                           *
+    *       -> thetaw(t) = inv(F).{exp[F.(t-t0)] - I}.vw0 + lambda.(t-t0) + thetaw(t0)  *
+    * THEREFORE:                                                                        *
+    *   thetaw(n) = inv(F).{exp[F.T] - I}.vw(n-1) + lambda.T + thetaw(n-1)              *
+    * NOTE:                                                                             *
+    *   thetaw(n) = inv(F).(A - I).vw(n-1) + B.T.u + thetaw(n-1)                        *
+    ************************************************************************************/
+    // we cant consider noise for now because the equations would be very different
+    // double noiseObs = STD_DEV_NOISE * gaussian_distr(gen);
+    // wheelsAngSpd = A * wheelsAngSpd + B * lastVoltageCmd + noiseObs;
+
+    // with the command voltage from controller, let's update wheels' velocities
+    motorPosition += F.inverse() * (A - Eigen::Matrix4d::Identity()) * wheelsAngSpd +
+        B * Ts * lastVoltageCmd;
+    wheelsAngSpd += A * wheelsAngSpd + B * lastVoltageCmd;
+
+    // with the wheels' velocities, we can calculate the robot's velocities
+    robotSpd = rMplus * wheelsAngSpd;
+
+    // to finish, we need to register the encoders' reads and update 'lastEncodersRead'
+    registerEncodersRead();
 }
 
-const Eigen::Matrix4d Robot::angSpdCmd2Voltage = Eigen::Matrix4d::Identity() * Robot::angSpdCmd2Voltage_oneWheel;
-
-const int Robot::nStepsBetweenUsingController = int(fUpdateRobot / fs);
-
-const double Robot::motorDivSize = 2 * PI / Robot::nSensorsPerWheel;
+void Robot::updateRobotStatus(const Eigen::Vector3d &robotSpdCmd) {
+    this->robotSpdCmd = robotSpdCmd;
+    Eigen::Vector4d wheelsCmd = M_over_r * robotSpdCmd;
+    updateRobotStatus(wheelsCmd);
+}
