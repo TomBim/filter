@@ -30,7 +30,7 @@ static const double Bw = 1;         // wheels' friction coeff (SI)
 
 /***** MOTOR'S PROPERTIES *****/
 static const double K = 1;          // torque constant (SI)
-static const double R = 50;         // motor's resistence (ohm)
+static const double RES_MOTOR = 50;         // motor's resistence (ohm)
 static const double Jm = 1;         // motor's inertia (SI)
 static const double Bm = 1;         // motor's friction coeff (SI)
 static const int N_POLES = 8;       // encoder's number of poles
@@ -57,5 +57,6 @@ static const Eigen::Matrix4d Cv;
 static const Eigen::Matrix4d H;
 static const Eigen::Matrix4d F, Finv;
 static const Eigen::Matrix4d A, B, Binv, C;
+static const Eigen::Matrix4d R, Rinv, Q, Qinv;
 
 #endif
