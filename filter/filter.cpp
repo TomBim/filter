@@ -22,7 +22,7 @@ void KalmanFilter::estimate(const Eigen::Vector4d &cmd) {
 void KalmanFilter::filtrate(const Eigen::Vector4d &obs) {
     KalmanGain = Sigma * C * (C * Sigma * C.transpose() + Q).inverse();
     mu = mu + KalmanGain * (obs - C * mu);
-    Sigma = (Eigen::Matrix4d::Identity() - KalmanGain * C) * Sigma
+    Sigma = (Eigen::Matrix4d::Identity() - KalmanGain * C) * Sigma;
 }
 
 Eigen::Vector4d KalmanFilter::applyFilter(const Eigen::Vector4d &voltageCmd,
