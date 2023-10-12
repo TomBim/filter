@@ -11,13 +11,15 @@
 
 class GaussianFilter {
     protected:
-        virtual void estimate(const Eigen::Vector4d &cmd) = 0;
+        const std::string type;
+
+        virtual void predict(const Eigen::Vector4d &cmd) = 0;
 
         virtual void filtrate(const Eigen::Vector4d &obs) = 0;
     public:
-        GaussianFilter();
+        GaussianFilter(std::string type) : type(type) {}
 
-        ~GaussianFilter();
+        virtual ~GaussianFilter() = 0;
 
         virtual Eigen::Vector4d applyFilter(const Eigen::Vector4d &voltageCmd, 
             const Eigen::Vector4d &encodersRead) = 0;
@@ -25,6 +27,8 @@ class GaussianFilter {
         virtual Eigen::Vector4d getLastFilteredSpd() const = 0;
 
         virtual void resetFilter() = 0;
+
+        std::string getFilterType() { return type; }
 };
 
 class KalmanFilter : GaussianFilter {
@@ -33,13 +37,13 @@ class KalmanFilter : GaussianFilter {
         Eigen::Matrix4d Sigma;
         Eigen::Matrix4d KalmanGain;
 
-        void estimate(const Eigen::Vector4d &cmd);
+        void predict(const Eigen::Vector4d &cmd);
 
         void filtrate(const Eigen::Vector4d &obs);
     public:
         KalmanFilter();
 
-        ~KalmanFilter();
+        ~KalmanFilter() {}
 
         Eigen::Vector4d applyFilter(const Eigen::Vector4d &voltageCmd, 
             const Eigen::Vector4d &encodersRead);
@@ -56,13 +60,13 @@ class InfoFilter : GaussianFilter {
         Eigen::Matrix4d infoMatrix_inv;
         Eigen::Vector4d mu;
 
-        void estimate(const Eigen::Vector4d &cmd);
+        void predict(const Eigen::Vector4d &cmd);
 
         void filtrate(const Eigen::Vector4d &obs);
     public:
         InfoFilter();
 
-        ~InfoFilter();
+        ~InfoFilter() {}
 
         Eigen::Vector4d applyFilter(const Eigen::Vector4d &voltageCmd,
             const Eigen::Vector4d &encodersRead);

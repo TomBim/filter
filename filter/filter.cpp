@@ -8,13 +8,15 @@
 // infoMatrix = 0 in the start, cool. But, then I have
 // to invert it?? It doesn't make sense.
 
+GaussianFilter::~GaussianFilter() {}
+
 /*****************    K A L M A N    *****************/
 
-KalmanFilter::KalmanFilter() : GaussianFilter() {
+KalmanFilter::KalmanFilter() : GaussianFilter("KF") {
     resetFilter();
 }
 
-void KalmanFilter::estimate(const Eigen::Vector4d &cmd) {
+void KalmanFilter::predict(const Eigen::Vector4d &cmd) {
     mu = A * mu + B * cmd;
     Sigma = A * Sigma * A.transpose() + R;
 }
@@ -27,7 +29,7 @@ void KalmanFilter::filtrate(const Eigen::Vector4d &obs) {
 
 Eigen::Vector4d KalmanFilter::applyFilter(const Eigen::Vector4d &voltageCmd,
         const Eigen::Vector4d &encodersRead) {
-    estimate(voltageCmd);
+    predict(voltageCmd);
     filtrate(encodersRead);
     return mu;
 }
@@ -43,11 +45,11 @@ void KalmanFilter::resetFilter() {
 
 /*************    I N F O R M A T I O N    ***************/
 
-InfoFilter::InfoFilter() : GaussianFilter() {
+InfoFilter::InfoFilter() : GaussianFilter("IF") {
     resetFilter();
 }
 
-void InfoFilter::estimate(const Eigen::Vector4d &cmd) {
+void InfoFilter::predict(const Eigen::Vector4d &cmd) {
     Eigen::Matrix4d infoMatrixPrev_inv = infoMatrix_inv;    // store infoMatrix_inv
     
     infoMatrix_inv = A * infoMatrixPrev_inv * A.transpose() + R;    // update infoMatrix_inv
@@ -67,7 +69,7 @@ void InfoFilter::filtrate(const Eigen::Vector4d &obs) {
 
 Eigen::Vector4d InfoFilter::applyFilter(const Eigen::Vector4d &voltageCmd,
         const Eigen::Vector4d &encodersRead) {
-    estimate(voltageCmd);
+    predict(voltageCmd);
     filtrate(encodersRead);
     return mu;
 }
