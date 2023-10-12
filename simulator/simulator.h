@@ -12,27 +12,28 @@
 #include "robot.h"
 #include "spd_types.h"
 #include "../consts/some_consts.h"
+#include "cmd_signal.h"
 
-enum class commandSignal{ Constant, Line, Triangular };
 
 class Simulator{
     private:
         static const int bufferSize = 1000;
-        std::string logFileName;
-        std::ofstream logFile;
         Robot *robot;
         std::vector<Eigen::Vector3d> robotTrueSpd_Buffer;
         std::vector<Eigen::Vector3d> robotReadSpd_Buffer;
         std::vector<Eigen::Vector4d> wheelsTrueSpd_Buffer;
         std::vector<Eigen::Vector4d> wheelsReadSpd_Buffer;
+        std::vector<double> timeBuffer;
+        std::string timeUnity = "ms";
+        double seconds2timeUnity = 1e-3;
         const Eigen::IOFormat tableFormatTAB;
 
+        std::string logFileName;
         static const vecEachSpdType<std::string> suffixes4logFile;
-
         vecEachSpdType<std::string> fileNames;
-
         static const vecEachSpdType<std::string> logFileHeaders;
-        
+
+
         std::string createName4Log();
 
         void bufferize(int bufferPos);
@@ -80,28 +81,22 @@ class Simulator{
         /// in a log file
         /// @param duration in seconds
         /// @param logFileName name of the file you want to create it (without extension)
-        void simulateFor(double duration, std::string logFileName);
+        /// @param cmd4wheels sugou
+        void simulateFor(double duration, const std::string logFileName, const CmdSignal &cmdSignal);
 
         /// @brief use this function to run the simulation
         /// for a certain duration. The function will
         /// write a log file whose name will be related
         /// to the current date
         /// @param duration in seconds
-        void simulateFor(double duration);
+        /// @param cmd4wheels sugou
+        void simulateFor(double duration, const CmdSignal &cmdSignal);
+
+
+        /// @brief sets the unity for the time printed on the log files
+        /// @param timeUnity choose one: "s", "ms", "us", "ns", "ps".
+        void setTimeUnity(const std::string timeUnity);
 };
 
-// @todo make this happen
-/*
-class CommandType{
-    private:
-        commandSignal cmdSignal;
-        std::vector<double> timeParams;
-        std::vector<double> valueParams;
-    
-    public:
-        CommandType(commandSignal cmdSignal, std::vector<double> timeParams, std::vector<double> valueParams);
-
-        double getCommand(double timeNow);
-};*/
 
 #endif
