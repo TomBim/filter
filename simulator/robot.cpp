@@ -1,18 +1,57 @@
 #include "robot.h"
 
-Robot::Robot(double stdDevNoise) {
+Robot::Robot(const std::string &filterType, double stdDevNoise) {
+    filter = nullptr;
+    hasFilter = false;
+    if(filterType == "kalman") {
+        filter = (GaussianFilter*) new KalmanFilter();
+        hasFilter = true;
+    }
+    else if(filterType == "info") {
+        filter = (GaussianFilter*) new InfoFilter();
+        hasFilter = true;
+    }
     controller = new Controller();
     noise = stdDevNoise;
     resetRobot();
 }
 
-Robot::Robot() {
+Robot::Robot(const std::string &filterType) {
+    this->filter = nullptr;
+    hasFilter = false;
+    if(filterType == "kalman") {
+        this->filter = (GaussianFilter*) new KalmanFilter();
+        hasFilter = true;
+    }
+    else if(filterType == "info") {
+        this->filter = (GaussianFilter*) new InfoFilter();
+        hasFilter = true;
+    }
     controller = new Controller();
     noise = 0;
     resetRobot();
 }
 
-Robot::~Robot() {}
+Robot::Robot() {
+    controller = new Controller();
+    filter = nullptr;
+    hasFilter = false,
+    noise = 0;
+    resetRobot();
+}
+
+Robot::Robot(double stdDevNoise) {
+    filter = nullptr;
+    hasFilter = false;
+    controller = new Controller();
+    noise = stdDevNoise;
+    resetRobot();
+}
+
+Robot::~Robot() {
+    delete filter;
+    delete controller;
+}
 
 void Robot::resetRobot() {
     // set velocities = 0
@@ -26,6 +65,13 @@ void Robot::resetRobot() {
 
     // reset controller
     controller->resetController();
+
+    // reset filter
+    lastEncodersRead.setZero();
+    if(hasFilter) {
+        filter->resetFilter();
+        lastEncodersRead_Filtered.setZero();
+    }
     
     // reset voltage cmd
     lastVoltageCmd.setZero();   // @todo is this rly necessary?
@@ -58,9 +104,16 @@ Eigen::Vector4d Robot::registerEncodersRead() {
 }
 
 void Robot::applyController() {
-    lastVoltageCmd = controller->applyController(getLastEncodersRead(), wheelsAngSpdCmd);
+    if(hasFilter)
+        lastVoltageCmd = controller->applyController(lastEncodersRead_Filtered, wheelsAngSpdCmd);
+    else
+        lastVoltageCmd = controller->applyController(lastEncodersRead, wheelsAngSpd);
 }
 
+void Robot::applyFilter() {
+    if(hasFilter)
+        lastEncodersRead_Filtered = filter->applyFilter(lastVoltageCmd, lastEncodersRead);
+}
 
 void Robot::updateRobotStatus(const Eigen::Vector4d &wheelsAngSpdCmd) {
     // first, let's apply the controller
@@ -88,8 +141,10 @@ void Robot::updateRobotStatus(const Eigen::Vector4d &wheelsAngSpdCmd) {
     // with the wheels' velocities, we can calculate the robot's velocities
     robotSpd = rMplus * wheelsAngSpd;
 
-    // to finish, we need to register the encoders' reads and update 'lastEncodersRead'
+    // to finish, we need to register the encoders' reads, update 'lastEncodersRead'
+    // and apply the filter
     registerEncodersRead();
+    applyFilter();
 }
 
 void Robot::updateRobotStatus(const Eigen::Vector3d &robotSpdCmd) {
