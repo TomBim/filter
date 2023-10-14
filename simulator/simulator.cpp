@@ -33,10 +33,10 @@ void Simulator::flushAllBuffers(int printUntil) {
         printUntil = bufferSize - 1;
 
     // flush on fyles
-    printBufferOnFile(fileNames.at(spdType::RobotTrue), robotTrueSpd_Buffer, printUntil);
-    printBufferOnFile(fileNames.at(spdType::RobotEstimation), robotReadSpd_Buffer, printUntil);
-    printBufferOnFile(fileNames.at(spdType::WheelsTrue), wheelsTrueSpd_Buffer, printUntil);
-    printBufferOnFile(fileNames.at(spdType::WheelsRead), wheelsReadSpd_Buffer, printUntil);
+    printBufferOnFile(fileNames.at(SpdType::RobotTrue), robotTrueSpd_Buffer, printUntil);
+    printBufferOnFile(fileNames.at(SpdType::RobotEstimation), robotReadSpd_Buffer, printUntil);
+    printBufferOnFile(fileNames.at(SpdType::WheelsTrue), wheelsTrueSpd_Buffer, printUntil);
+    printBufferOnFile(fileNames.at(SpdType::WheelsRead), wheelsReadSpd_Buffer, printUntil);
 }
 
 void Simulator::printBufferOnFile(const std::string &fileName, const std::vector<Eigen::Vector4d> &buffer, int printUntil) {
@@ -60,7 +60,7 @@ void Simulator::printBufferOnFile(const std::string &fileName, const std::vector
 void Simulator::startLogFiles() {
     std::ofstream file;
     std::string header;
-    for(int i = 0; i < static_cast<int>(spdType::NTypes); i++) {
+    for(int i = 0; i < static_cast<int>(SpdType::NTypes); i++) {
         // put names into class' variable
         fileNames.putAt(i, logFileName + suffixes4logFile.at(i));
 
@@ -145,12 +145,12 @@ void Simulator::setTimeUnity(std::string timeUnity) {
 }
 
 const vecEachSpdType<std::string> Simulator::suffixes4logFile(
-    std::vector<spdType>({spdType::RobotEstimation, spdType::RobotTrue, spdType::WheelsRead, spdType::WheelsTrue}),
+    std::vector<SpdType>({SpdType::RobotEstimation, SpdType::RobotTrue, SpdType::WheelsRead, SpdType::WheelsTrue}),
     std::vector<std::string>({"rEstim.txt",         "rTrue.txt",        "wRead.txt",         "wTrue.txt"})
 );
 
 const vecEachSpdType<std::string> Simulator::logFileHeaders(
-    std::vector<spdType>({spdType::RobotEstimation, spdType::RobotTrue, spdType::WheelsRead, spdType::WheelsTrue}),
+    std::vector<SpdType>({SpdType::RobotEstimation, SpdType::RobotTrue, SpdType::WheelsRead, SpdType::WheelsTrue}),
     std::vector<std::string>({("t ({timeUnity})\tvx (m/s)\tvy (m/s)\tomega (rad/s)"),
                               ("t ({timeUnity})\tvx (m/s)\tvy (m/s)\tomega (rad/s)"),
                               ("t ({timeUnity})\tomega1 (rad/s)\tomega2 (rads)\tomega3 (rad/s)\tomega4 (rad/s)"),

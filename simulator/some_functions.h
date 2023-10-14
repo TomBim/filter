@@ -4,7 +4,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
-#include <eigen3/Eigen/Eigen>
+#include <eigen3/Eigen/Core>
 
 void progressBar(float progress);
 

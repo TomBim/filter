@@ -2,7 +2,7 @@
 #define CMD_SIGNAL_H
 
 #include <vector>
-#include <eigen3/Eigen/Eigen>
+#include <eigen3/Eigen/Core>
 
 
 enum class SignalType{ Constant, Line, /*Triangular, Pulse*/ };
@@ -60,7 +60,7 @@ class LineCmdSignal : CmdSignalBase {
 class CmdSignalOneWheel {
     private:
         std::vector<CmdSignalBase*> cmds;
-        std::vector<double> timeVec;
+        std::vector<double> timeVec;    // in seconds
 
     public:
         CmdSignalOneWheel();
@@ -76,16 +76,32 @@ class CmdSignalOneWheel {
 
 class CmdSignal {
     private:
-        std::vector<CmdSignalOneWheel> eachWheel;
-    
+        static const int V_INDEX = 0;
+        static const int Vn_INDEX = 1;
+        static const int OMEGA_INDEX = 2;
+        std::vector<CmdSignalOneWheel> desiredRobotStates;
+
+        /// @param startTime time to start the cmd (in seconds)
+        /// @param endTime to start the cmd (in seconds)
+        int addCmd(const CmdSignalBase *cmd, double startTime, double endTime, const int stateIndex);    
     public:
         CmdSignal();
         
         ~CmdSignal();
 
-        int addCmd(const CmdSignalBase *cmd, int wheel, double startTime, double endTime);
+        /// @param startTime time to start the cmd (in seconds)
+        /// @param endTime to start the cmd (in seconds)
+        int addCmd_robotStateV(const CmdSignalBase *cmd, double startTime, double endTime);
 
-        Eigen::Vector4d getCmdNow(double timeNow) const;
+        /// @param startTime time to start the cmd (in seconds)
+        /// @param endTime to start the cmd (in seconds)
+        int addCmd_robotStateVn(const CmdSignalBase *cmd, double startTime, double endTime);
+
+        /// @param startTime time to start the cmd (in seconds)
+        /// @param endTime to start the cmd (in seconds)
+        int addCmd_robotStateOmega(const CmdSignalBase *cmd, double startTime, double endTime);
+
+        Eigen::Vector3d getCmdNow(double timeNow) const;
 
         void reset();
 };

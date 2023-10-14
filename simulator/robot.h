@@ -2,7 +2,7 @@
 #define ROBOT_H
 
 #include <cmath>
-#include <eigen3/Eigen/Dense>
+#include <eigen3/Eigen/Core>
 #include "controller.h"
 #include "../consts/some_consts.h"
 #include "../main.h"

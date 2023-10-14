@@ -11,6 +11,7 @@
 
 #include "simulator/robot.h"
 #include "simulator/some_functions.h"
+#include "simulator/simulator.h"
 
 static std::random_device rd;
 static std::mt19937_64 gen(rd());

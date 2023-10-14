@@ -100,22 +100,32 @@ void CmdSignalOneWheel::reset() {
 
 
 
-CmdSignal::CmdSignal() : eachWheel(4) {}
+CmdSignal::CmdSignal() : desiredRobotStates(3) {}
 
-int CmdSignal::addCmd(const CmdSignalBase *cmd, int wheel, double startTime, double endTime) {
-    if(wheel < 0 || wheel > 3)
-        return 1;
-    return eachWheel.at(wheel).addCmd(cmd, startTime, endTime);
+int CmdSignal::addCmd_robotStateV(const CmdSignalBase *cmd, double startTime, double endTime) {
+    return addCmd(cmd, startTime, endTime, V_INDEX);
 }
 
-Eigen::Vector4d CmdSignal::getCmdNow(double timeNow) const {
-    Eigen::Vector4d cmdValues;
-    for(int i = 0; i < 4; i++)
-        cmdValues[i] = eachWheel.at(i).getCmdNow(timeNow);
+int CmdSignal::addCmd_robotStateVn(const CmdSignalBase *cmd, double startTime, double endTime) {
+    return addCmd(cmd, startTime, endTime, Vn_INDEX);
+}
+
+int CmdSignal::addCmd_robotStateOmega(const CmdSignalBase *cmd, double startTime, double endTime) {
+    return addCmd(cmd, startTime, endTime, OMEGA_INDEX);
+}
+
+int CmdSignal::addCmd(const CmdSignalBase *cmd, double startTime, double endTime, const int stateIndex) {
+    return desiredRobotStates.at(stateIndex).addCmd(cmd, startTime, endTime);
+}
+
+Eigen::Vector3d CmdSignal::getCmdNow(double timeNow) const {
+    Eigen::Vector3d cmdValues;
+    for(int i = 0; i < 3; i++)
+        cmdValues[i] = desiredRobotStates.at(i).getCmdNow(timeNow);
     return cmdValues;
 }
 
 void CmdSignal::reset() {
     for(int i = 0; i < 4; i++)
-        eachWheel.at(i).reset();
+        desiredRobotStates.at(i).reset();
 }

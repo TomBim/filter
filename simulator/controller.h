@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#include <eigen3/Eigen/Eigen>
+#include <eigen3/Eigen/Core>
 #include "robot.h"
 
 class Controller{

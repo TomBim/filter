@@ -7,7 +7,7 @@
 
 #ifdef FILTER_V_1_0
 
-#include "eigen/Eigen/Eigen"
+#include "eigen3/Eigen/Core"
 
 class GaussianFilter {
     protected:
