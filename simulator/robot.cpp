@@ -94,20 +94,26 @@ Eigen::Vector3d Robot::getRobotsTrueSpd() const {
 }
 
 Eigen::Vector4d Robot::registerEncodersRead() {
-    Eigen::Vector4i counts;
-    counts = motorPosition * rad2counts;
+    Eigen::Vector4i  counts;
+    counts = (motorPosition * rad2counts).cast<int>();
+    std::cout << "motor pos b4 = " << motorPosition.transpose() << "\n\n";
+    std::cout << "counts = " << counts.transpose() << "\n\n";
     Eigen::Vector4d deltaThetaCounted;
-    deltaThetaCounted = ((Eigen::Vector4d) counts) * counts2rad;
+    deltaThetaCounted = counts.cast<double>() * counts2rad;
+    std::cout << "dThetaCounted = " << deltaThetaCounted.transpose() << "\n\n";
     motorPosition -= deltaThetaCounted;    // don't need to think if it's negative or positive
+    std::cout << "motor pos after = " << motorPosition.transpose() << "\n\n";
     lastEncodersRead =  deltaThetaCounted * Fs;
     return lastEncodersRead;
 }
 
 void Robot::applyController() {
     if(hasFilter)
-        lastVoltageCmd = controller->applyController(lastEncodersRead_Filtered, wheelsAngSpdCmd);
+        lastVoltageCmd = controller->applyController(lastEncodersRead_Filtered / N,
+                                                     wheelsAngSpdCmd);
     else
-        lastVoltageCmd = controller->applyController(lastEncodersRead, wheelsAngSpd);
+        lastVoltageCmd = controller->applyController(lastEncodersRead / N,
+                                                     wheelsAngSpdCmd);
 }
 
 void Robot::applyFilter() {
@@ -118,6 +124,9 @@ void Robot::applyFilter() {
 void Robot::updateRobotStatus(const Eigen::Vector4d &wheelsAngSpdCmd) {
     // first, let's apply the controller
     this->wheelsAngSpdCmd = wheelsAngSpdCmd;
+    #ifdef DBG_MODE
+    std::cout << "## CONTROLLER \n";
+    #endif
     applyController();
 
     /************************************************************************************
@@ -126,24 +135,42 @@ void Robot::updateRobotStatus(const Eigen::Vector4d &wheelsAngSpdCmd) {
     *       -> thetaw(t) = inv(F).{exp[F.(t-t0)] - I}.vw0 + lambda.(t-t0) + thetaw(t0)  *
     * THEREFORE:                                                                        *
     *   thetaw(n) = inv(F).{exp[F.T] - I}.vw(n-1) + lambda.T + thetaw(n-1)              *
+    * BUT: theta motor                                                                  *
+    *   thetam(n) = thetaw(n) * REDUCTION_FACTOR                                        *
     * NOTE:                                                                             *
-    *   thetaw(n) = inv(F).(A - I).vw(n-1) + B.T.u + thetaw(n-1)                        *
+    *   thetam(n) = REDUCTION_FACTOR.(inv(F).(A - I).vw(n-1) + B.T.u) + thetam(n-1)     *
     ************************************************************************************/
     // we cant consider noise for now because the equations would be very different
     // double noiseObs = STD_DEV_NOISE * gaussian_distr(gen);
     // wheelsAngSpd = A * wheelsAngSpd + B * lastVoltageCmd + noiseObs;
 
+    #ifdef DBG_MODE
+    std::cout << "## CINEMATIC UPDATE" << std::endl;
+    std::cout << "motor position b4 = " << motorPosition.transpose() << std::endl;
+    #endif
+
     // with the command voltage from controller, let's update wheels' velocities
-    motorPosition += F.inverse() * (A - Eigen::Matrix4d::Identity()) * wheelsAngSpd +
-        B * Ts * lastVoltageCmd;
-    wheelsAngSpd += A * wheelsAngSpd + B * lastVoltageCmd;
+    motorPosition += (F.inverse() * (A - Eigen::Matrix4d::Identity()) * wheelsAngSpd +
+        B * Ts * lastVoltageCmd) * N;
+    wheelsAngSpd = A * wheelsAngSpd + B * lastVoltageCmd;
+    #ifdef DBG_MODE
+    std::cout << "motor position after = " << motorPosition.transpose() << "\n\n";
+    std::cout << "wheels omega = " << wheelsAngSpd.transpose() << "\n\n";
+    std::cout << "last voltage cmd = " << lastVoltageCmd.transpose() << "\n\n";
+    #endif
 
     // with the wheels' velocities, we can calculate the robot's velocities
     robotSpd = rMplus * wheelsAngSpd;
 
     // to finish, we need to register the encoders' reads, update 'lastEncodersRead'
     // and apply the filter
+    #ifdef DBG_MODE
+    std::cout << "## ENCODER \n";
+    #endif
     registerEncodersRead();
+    #ifdef DBG_MODE
+    std::cout << "## FILTER \n";
+    #endif
     applyFilter();
 }
 

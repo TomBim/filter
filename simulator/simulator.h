@@ -8,12 +8,12 @@
 #include <time.h>
 #include <ctime>
 #include <vector>
+#include <iomanip>
 
-#include "robot.h"
-#include "spd_types.h"
 #include "../consts/some_consts.h"
+#include "spd_types.h"
 #include "cmd_signal.h"
-
+#include "robot.h"
 
 class Simulator{
     private:
@@ -25,7 +25,7 @@ class Simulator{
         std::vector<Eigen::Vector4d> wheelsReadSpd_Buffer;
         std::vector<double> timeBuffer;
         std::string timeUnity = "ms";
-        double seconds2timeUnity = 1e-3;
+        double seconds2timeUnity = 1e3;
         const Eigen::IOFormat tableFormatTAB;
 
         std::string logFileName;
@@ -36,7 +36,7 @@ class Simulator{
 
         std::string createName4Log();
 
-        void bufferize(int bufferPos);
+        void bufferize(int bufferPos, double timeNow);
 
         /// @brief flush part of the buffers into each file (for all the spdType's).
         /// @attention this function won't clean the buffers, since it supposes

@@ -83,6 +83,8 @@ double CmdSignalOneWheel::getCmdNow(double timeNow) const {
     for(int i = 0; i < timeVec.size(); i++)
         if(timeVec.at(i) > timeNow)
             return cmds.at(i-1)->getCmdNow(timeNow);
+    // if didn't find, its because the last one is where we are
+    return cmds.at(timeVec.size() - 1)->getCmdNow(timeNow);
 }
 
 void CmdSignalOneWheel::reset() {
@@ -101,6 +103,8 @@ void CmdSignalOneWheel::reset() {
 
 
 CmdSignal::CmdSignal() : desiredRobotStates(3) {}
+
+CmdSignal::~CmdSignal() {}
 
 int CmdSignal::addCmd_robotStateV(const CmdSignalBase *cmd, double startTime, double endTime) {
     return addCmd(cmd, startTime, endTime, V_INDEX);

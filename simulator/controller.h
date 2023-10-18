@@ -2,7 +2,10 @@
 #define CONTROLLER_H
 
 #include <eigen3/Eigen/Core>
-#include "robot.h"
+
+#include <iostream>
+
+#include "../consts/some_consts.h"
 
 class Controller{
     private:

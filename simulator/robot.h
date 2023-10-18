@@ -3,10 +3,17 @@
 
 #include <cmath>
 #include <eigen3/Eigen/Core>
-#include "controller.h"
+#include <random>
+#include <ctime>
+#include <stdio.h>
+#include <iostream>
+
 #include "../consts/some_consts.h"
-#include "../main.h"
 #include "../filter/filter.h"
+#include "controller.h"
+
+extern std::mt19937_64 gen;
+extern std::normal_distribution<double> gaussian_distr;
 
 class Robot{
     private:

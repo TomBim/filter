@@ -3,11 +3,12 @@
 
 #define FILTER_V_1_0
 
+#include "eigen3/Eigen/Core"
+
 #include "../consts/some_consts.h"
 
 #ifdef FILTER_V_1_0
 
-#include "eigen3/Eigen/Core"
 
 class GaussianFilter {
     protected:

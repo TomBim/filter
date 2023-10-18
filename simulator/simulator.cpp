@@ -7,14 +7,21 @@ std::string Simulator::createName4Log() {
     time(&currentTime);
     localTime = localtime(&currentTime);
 
-    std::string date, hour;
-    date = std::to_string(localTime->tm_year) + std::to_string(localTime->tm_mon) + std::to_string(localTime->tm_mday);
-    hour = std::to_string(localTime->tm_hour) + std::to_string(localTime->tm_min) + std::to_string(localTime->tm_sec);
+    std::ostringstream date, hour;
+    date << std::setw(2) << std::setfill('0') << localTime->tm_year + 1900 \
+         << std::setw(2) << std::setfill('0') << localTime->tm_mon + 1 \
+         << std::setw(2) << std::setfill('0') << localTime->tm_mday;
 
-    return "results/" + date + "-" + hour;
+
+    hour << std::setw(2) << std::setfill('0') << localTime->tm_hour \
+         << std::setw(2) << std::setfill('0') << localTime->tm_min \
+         << std::setw(2) << std::setfill('0') << localTime->tm_sec;
+
+    return "results/" + date.str() + "-" + hour.str();
 }
 
-void Simulator::bufferize(int bufferPos) {
+void Simulator::bufferize(int bufferPos, double timeNow) {
+    timeBuffer[bufferPos] = timeNow;
     robotReadSpd_Buffer[bufferPos] = robot->estimateRobotsSpd();
     robotTrueSpd_Buffer[bufferPos] = robot->getRobotsTrueSpd();
     wheelsReadSpd_Buffer[bufferPos] = robot->getLastEncodersRead();
@@ -43,7 +50,7 @@ void Simulator::printBufferOnFile(const std::string &fileName, const std::vector
     std::ofstream file(fileName, std::ios_base::app);
     if(file.is_open()) {
         for(int i = 0; i <= printUntil; i++)
-            file << timeBuffer.at(i) << "\t" << buffer.at(i).format(tableFormatTAB);
+            file << timeBuffer.at(i) << "\t" << buffer.at(i).format(tableFormatTAB) << std::endl;
         file.close();
     }
 }
@@ -52,7 +59,7 @@ void Simulator::printBufferOnFile(const std::string &fileName, const std::vector
     std::ofstream file(fileName, std::ios_base::app);
     if(file.is_open()) {
         for(int i = 0; i <= printUntil; i++)
-            file << timeBuffer.at(i) << "\t" <<  buffer.at(i).format(tableFormatTAB);
+            file << timeBuffer.at(i) * seconds2timeUnity << "\t" <<  buffer.at(i).format(tableFormatTAB) << std::endl;
         file.close();
     }
 }
@@ -69,7 +76,7 @@ void Simulator::startLogFiles() {
         if(file.is_open()) {
             std::string str2beReplaced = "{timeUnity}";
             int timeUnityPos = logFileHeaders.at(i).find(str2beReplaced);
-            if(timeUnityPos > 0)
+            if(timeUnityPos >= 0)
                 file << logFileHeaders.at(i).replace(timeUnityPos, str2beReplaced.size(), timeUnity) << std::endl;
             else
                 file << logFileHeaders.at(i) << std::endl;
@@ -81,7 +88,7 @@ void Simulator::startLogFiles() {
 Simulator::Simulator() : robotTrueSpd_Buffer(bufferSize), robotReadSpd_Buffer(bufferSize),
                          wheelsTrueSpd_Buffer(bufferSize), wheelsReadSpd_Buffer(bufferSize),
                          timeBuffer(bufferSize), tableFormatTAB(Eigen::StreamPrecision, 0, " ", "\t") {
-    robot = new Robot(STD_DEV_NOISE);
+    robot = new Robot(STD_DEV_NOISE_MOV);
 }
 
 Simulator::~Simulator() {
@@ -94,20 +101,24 @@ void Simulator::simulateFor(double duration, const std::string logFileName, cons
         return;
 
     // start logs
+    this->logFileName = logFileName;
     startLogFiles();
 
     // simulate
-    this->logFileName = logFileName;
     const int nSteps = ceil(duration * Fs);    
     int bufferPos = 0;
     for(int step = 0; step < nSteps; step++) {
-        robot->updateRobotStatus(cmdSignal.getCmdNow(Fs * step));
+        #ifdef DBG_MODE
+        std::cout << std::endl << "# STEP = " << step << std::endl;
+        #endif
+        robot->updateRobotStatus(cmdSignal.getCmdNow(Ts * step));
         bufferPos = step % bufferSize;
+
 
         if(bufferPos == 0 && step > 0)
             flushAllBuffers();
 
-        bufferize(bufferPos);
+        bufferize(bufferPos, Ts * step);
     }
 
     // flush the rest of the buffer
@@ -128,19 +139,19 @@ void Simulator::setTimeUnity(std::string timeUnity) {
     }
     else if(timeUnity == "ms") {
         this->timeUnity = "ms";
-        this->seconds2timeUnity = 1e-3;
+        this->seconds2timeUnity = 1e3;
     }
     else if(timeUnity == "us") {
         this->timeUnity = "us";
-        this->seconds2timeUnity = 1e-6;
+        this->seconds2timeUnity = 1e6;
     }
     else if(timeUnity == "ns") {
         this->timeUnity = "ns";
-        this->seconds2timeUnity = 1e-9;
+        this->seconds2timeUnity = 1e9;
     }
     else if(timeUnity == "ps") {
         this->timeUnity = "ps";
-        this->seconds2timeUnity = 1e-12;
+        this->seconds2timeUnity = 1e12;
     }
 }
 

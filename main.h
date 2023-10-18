@@ -9,13 +9,15 @@
 #include <ctime>
 #include <string>
 
-#include "simulator/robot.h"
+#include "consts/some_consts.h"
 #include "simulator/some_functions.h"
+#include "simulator/spd_types.h"
+#include "simulator/cmd_signal.h"
 #include "simulator/simulator.h"
 
-static std::random_device rd;
-static std::mt19937_64 gen(rd());
-static std::normal_distribution<double> gaussian_distr(0, 1);
+std::random_device rd;
+std::mt19937_64 gen(rd());
+std::normal_distribution<double> gaussian_distr(0, 1);
 
 int main();
 

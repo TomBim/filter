@@ -14,8 +14,13 @@ Eigen::Vector4d Controller::applyController(const Eigen::Vector4d &wheelsAngSpd,
     Eigen::Vector4d error = wheelsAngSpdCmd - wheelsAngSpd;
     Eigen::Vector4d outVoltage;
 
-    outVoltage = Binv* wheelsAngSpdCmd;
+    #ifdef DBG_MODE
+    std::cout << "cmd = " << wheelsAngSpdCmd.transpose() << "\n\n";
+    std::cout << "read = " << wheelsAngSpd.transpose() << "\n\n";
+    std::cout << "error =  " << error.transpose() << "\n\n";
+    #endif
 
+    outVoltage.setZero();
     if(hasP)
         outVoltage += CONTROL_P * error;
     if(hasI) {
@@ -25,6 +30,15 @@ Eigen::Vector4d Controller::applyController(const Eigen::Vector4d &wheelsAngSpd,
     if(hasD) {
         outVoltage += CONTROL_D * (error - lastError);
         lastError = error;
+    }
+
+    double voltage_i;
+    for(int i = 0; i < outVoltage.size(); i++) {
+        voltage_i = outVoltage[i];
+        if(abs(voltage_i) > MAX_VOLTAGE)
+            if(voltage_i > 0)
+                 outVoltage[i] =  MAX_VOLTAGE;
+            else outVoltage[i] = -MAX_VOLTAGE;
     }
 
     return outVoltage;
