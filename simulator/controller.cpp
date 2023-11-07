@@ -11,13 +11,13 @@ Controller::Controller() {
 Controller::~Controller() {}
 
 Eigen::Vector4d Controller::applyController(const Eigen::Vector4d &wheelsAngSpd, const Eigen::Vector4d &wheelsAngSpdCmd) {
-    Eigen::Vector4d error = wheelsAngSpdCmd - wheelsAngSpd;
+    Eigen::Vector4d error = (wheelsAngSpdCmd - wheelsAngSpd) * N;
     Eigen::Vector4d outVoltage;
 
     #ifdef DBG_MODE
-    std::cout << "cmd = " << wheelsAngSpdCmd.transpose() << "\n\n";
-    std::cout << "read = " << wheelsAngSpd.transpose() << "\n\n";
-    std::cout << "error =  " << error.transpose() << "\n\n";
+    debugBuffer << "cmd = " << wheelsAngSpdCmd.transpose() << "\n\n";
+    debugBuffer << "read = " << wheelsAngSpd.transpose() << "\n\n";
+    debugBuffer << "error =  " << error.transpose() << "\n\n";
     #endif
 
     outVoltage.setZero();

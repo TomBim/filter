@@ -24,7 +24,7 @@ void Simulator::bufferize(int bufferPos, double timeNow) {
     timeBuffer[bufferPos] = timeNow;
     robotReadSpd_Buffer[bufferPos] = robot->estimateRobotsSpd();
     robotTrueSpd_Buffer[bufferPos] = robot->getRobotsTrueSpd();
-    wheelsReadSpd_Buffer[bufferPos] = robot->getLastEncodersRead();
+    wheelsReadSpd_Buffer[bufferPos] = robot->getEstimatedWheelsSpd();
     wheelsTrueSpd_Buffer[bufferPos] = robot->getWheelsTrueSpd();
 }
 
@@ -50,7 +50,7 @@ void Simulator::printBufferOnFile(const std::string &fileName, const std::vector
     std::ofstream file(fileName, std::ios_base::app);
     if(file.is_open()) {
         for(int i = 0; i <= printUntil; i++)
-            file << timeBuffer.at(i) << "\t" << buffer.at(i).format(tableFormatTAB) << std::endl;
+            file << timeBuffer.at(i) * seconds2timeUnity << "\t" << buffer.at(i).format(tableFormatTAB) << std::endl;
         file.close();
     }
 }
@@ -88,7 +88,7 @@ void Simulator::startLogFiles() {
 Simulator::Simulator() : robotTrueSpd_Buffer(bufferSize), robotReadSpd_Buffer(bufferSize),
                          wheelsTrueSpd_Buffer(bufferSize), wheelsReadSpd_Buffer(bufferSize),
                          timeBuffer(bufferSize), tableFormatTAB(Eigen::StreamPrecision, 0, " ", "\t") {
-    robot = new Robot(STD_DEV_NOISE_MOV);
+    robot = new Robot(filterType, STD_DEV_NOISE_MOV);
 }
 
 Simulator::~Simulator() {
@@ -105,21 +105,32 @@ void Simulator::simulateFor(double duration, const std::string logFileName, cons
     startLogFiles();
 
     // simulate
-    const int nSteps = ceil(duration * Fs);    
+    const int nSteps = ceil(duration * Fs);
+    const int updateBarPeriod_steps = ((nSteps > 100) ? (nSteps / 100) : 1);
+    float progress = 0;
+    int lastBarUpdate_step = 0;
     int bufferPos = 0;
     for(int step = 0; step < nSteps; step++) {
         #ifdef DBG_MODE
-        std::cout << std::endl << "# STEP = " << step << std::endl;
+        updateDebugLog();
+        debugBuffer << std::endl << "# STEP = " << step << std::endl;
         #endif
+        if(step == 0)
+            progressBar(0);
+        else if(step - lastBarUpdate_step >= updateBarPeriod_steps) {
+            progress = step * 1.0 / nSteps;
+            progressBar(progress);
+            lastBarUpdate_step = step;
+        }
+        
         robot->updateRobotStatus(cmdSignal.getCmdNow(Ts * step));
         bufferPos = step % bufferSize;
-
-
         if(bufferPos == 0 && step > 0)
             flushAllBuffers();
-
         bufferize(bufferPos, Ts * step);
     }
+    progressBar(1);
+    std::cout << std::endl;
 
     // flush the rest of the buffer
     flushAllBuffers(bufferPos);

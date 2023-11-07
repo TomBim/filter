@@ -9,8 +9,9 @@
 #include <iostream>
 
 #include "../consts/some_consts.h"
-#include "../filter/filter.h"
+#include "some_functions.h"
 #include "controller.h"
+#include "../filter/filter.h"
 
 extern std::mt19937_64 gen;
 extern std::normal_distribution<double> gaussian_distr;
@@ -28,7 +29,8 @@ class Robot{
         Controller* controller = nullptr;
 
         Eigen::Vector4d lastEncodersRead;
-        Eigen::Vector4d lastEncodersRead_Filtered;
+        Eigen::Vector4d estimatedWheelsAngSpd;  // if has filter, its the filtered speed. 
+                                                // If doesn't have, the encoders read speed
         Eigen::Vector4d motorPosition;      // rad
         Eigen::Vector4d lastVoltageCmd;
 
@@ -65,7 +67,7 @@ class Robot{
 
         void resetRobot();
 
-        Eigen::Vector4d getLastEncodersRead() const;
+        Eigen::Vector4d getEstimatedWheelsSpd() const;
 
         Eigen::Vector4d getWheelsTrueSpd() const;
 

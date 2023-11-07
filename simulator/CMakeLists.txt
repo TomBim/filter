@@ -5,3 +5,4 @@ add_library(simLib STATIC
     simulator.cpp
     some_functions.cpp
 )
+target_link_libraries(simLib constsLib filterLib)

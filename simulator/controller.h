@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "../consts/some_consts.h"
+#include "some_functions.h"
 
 class Controller{
     private:

@@ -70,15 +70,15 @@ void Robot::resetRobot() {
     lastEncodersRead.setZero();
     if(hasFilter) {
         filter->resetFilter();
-        lastEncodersRead_Filtered.setZero();
+        estimatedWheelsAngSpd.setZero();
     }
     
     // reset voltage cmd
     lastVoltageCmd.setZero();   // @todo is this rly necessary?
 }
 
-Eigen::Vector4d Robot::getLastEncodersRead() const {
-    return lastEncodersRead;
+Eigen::Vector4d Robot::getEstimatedWheelsSpd() const {
+    return estimatedWheelsAngSpd;
 };
 
 Eigen::Vector4d Robot::getWheelsTrueSpd() const {
@@ -86,7 +86,7 @@ Eigen::Vector4d Robot::getWheelsTrueSpd() const {
 }
 
 Eigen::Vector3d Robot::estimateRobotsSpd() const {
-    return rMplus * lastEncodersRead;
+    return rMplus * estimatedWheelsAngSpd;
 }
 
 Eigen::Vector3d Robot::getRobotsTrueSpd() const {
@@ -96,36 +96,43 @@ Eigen::Vector3d Robot::getRobotsTrueSpd() const {
 Eigen::Vector4d Robot::registerEncodersRead() {
     Eigen::Vector4i  counts;
     counts = (motorPosition * rad2counts).cast<int>();
-    std::cout << "motor pos b4 = " << motorPosition.transpose() << "\n\n";
-    std::cout << "counts = " << counts.transpose() << "\n\n";
     Eigen::Vector4d deltaThetaCounted;
     deltaThetaCounted = counts.cast<double>() * counts2rad;
-    std::cout << "dThetaCounted = " << deltaThetaCounted.transpose() << "\n\n";
+    #ifdef DBG_MODE
+    debugBuffer << "motor pos b4 = " << motorPosition.transpose() << "\n\n";
+    debugBuffer << "counts = " << counts.transpose() << "\n\n";
+    debugBuffer << "dThetaCounted = " << deltaThetaCounted.transpose() << "\n\n";
+    #endif
     motorPosition -= deltaThetaCounted;    // don't need to think if it's negative or positive
-    std::cout << "motor pos after = " << motorPosition.transpose() << "\n\n";
+    #ifdef DBG_MODE
+    debugBuffer << "motor pos after = " << motorPosition.transpose() << "\n\n";
+    #endif
     lastEncodersRead =  deltaThetaCounted * Fs;
     return lastEncodersRead;
 }
 
 void Robot::applyController() {
-    if(hasFilter)
-        lastVoltageCmd = controller->applyController(lastEncodersRead_Filtered / N,
-                                                     wheelsAngSpdCmd);
-    else
-        lastVoltageCmd = controller->applyController(lastEncodersRead / N,
-                                                     wheelsAngSpdCmd);
+    lastVoltageCmd = controller->applyController(estimatedWheelsAngSpd,
+                                                 wheelsAngSpdCmd);
 }
 
 void Robot::applyFilter() {
     if(hasFilter)
-        lastEncodersRead_Filtered = filter->applyFilter(lastVoltageCmd, lastEncodersRead);
+        estimatedWheelsAngSpd = filter->applyFilter(lastVoltageCmd, lastEncodersRead);
+    else
+        estimatedWheelsAngSpd = lastEncodersRead / N;
+    
+    #ifdef DBG_MODE
+    if( !hasFilter )
+        debugBuffer << "NO FILTER\n\n";
+    #endif
 }
 
 void Robot::updateRobotStatus(const Eigen::Vector4d &wheelsAngSpdCmd) {
     // first, let's apply the controller
     this->wheelsAngSpdCmd = wheelsAngSpdCmd;
     #ifdef DBG_MODE
-    std::cout << "## CONTROLLER \n";
+    debugBuffer << "## CONTROLLER \n\n";
     #endif
     applyController();
 
@@ -145,18 +152,18 @@ void Robot::updateRobotStatus(const Eigen::Vector4d &wheelsAngSpdCmd) {
     // wheelsAngSpd = A * wheelsAngSpd + B * lastVoltageCmd + noiseObs;
 
     #ifdef DBG_MODE
-    std::cout << "## CINEMATIC UPDATE" << std::endl;
-    std::cout << "motor position b4 = " << motorPosition.transpose() << std::endl;
+    debugBuffer << "## CINEMATIC UPDATE \n\n";
+    debugBuffer << "motor position b4 = " << motorPosition.transpose() << "\n\n";
     #endif
 
     // with the command voltage from controller, let's update wheels' velocities
-    motorPosition += (F.inverse() * (A - Eigen::Matrix4d::Identity()) * wheelsAngSpd +
-        B * Ts * lastVoltageCmd) * N;
+    motorPosition += N * (F.inverse() * (A - Eigen::Matrix4d::Identity()) * wheelsAngSpd +
+        B * Ts * lastVoltageCmd);
     wheelsAngSpd = A * wheelsAngSpd + B * lastVoltageCmd;
     #ifdef DBG_MODE
-    std::cout << "motor position after = " << motorPosition.transpose() << "\n\n";
-    std::cout << "wheels omega = " << wheelsAngSpd.transpose() << "\n\n";
-    std::cout << "last voltage cmd = " << lastVoltageCmd.transpose() << "\n\n";
+    debugBuffer << "motor position after = " << motorPosition.transpose() << "\n\n";
+    debugBuffer << "wheels omega = " << wheelsAngSpd.transpose() << "\n\n";
+    debugBuffer << "last voltage cmd = " << lastVoltageCmd.transpose() << "\n\n";
     #endif
 
     // with the wheels' velocities, we can calculate the robot's velocities
@@ -165,11 +172,11 @@ void Robot::updateRobotStatus(const Eigen::Vector4d &wheelsAngSpdCmd) {
     // to finish, we need to register the encoders' reads, update 'lastEncodersRead'
     // and apply the filter
     #ifdef DBG_MODE
-    std::cout << "## ENCODER \n";
+    debugBuffer << "## ENCODER \n\n";
     #endif
     registerEncodersRead();
     #ifdef DBG_MODE
-    std::cout << "## FILTER \n";
+    debugBuffer << "## FILTER \n\n";
     #endif
     applyFilter();
 }

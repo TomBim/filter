@@ -1,13 +1,16 @@
-echo "les go! les build it"
+echo "****  LES GO! LES BUILD IT!  *****"
 
 cd build
 #rm CMakeCache.txt
 cmake -GNinja ..
-ninja
+
+echo ""
+echo "*****   NINJA NELES!!!   *****"
+ninja #> /mnt/c/Users/tombim/OneDrive/Bureau/log.md
 ninja install
 #cmake --install .
 
-
-echo "now, les execute it shauhasusha"
+echo ""
+echo "*****   EXECUTINGGG....  *****"
 cd ..
-./bin/simulador > /mnt/c/Users/tombim/OneDrive/Bureau/log.md
+./bin/simulador #> /mnt/c/Users/tombim/OneDrive/Bureau/log.md

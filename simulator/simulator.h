@@ -13,10 +13,12 @@
 #include "../consts/some_consts.h"
 #include "spd_types.h"
 #include "cmd_signal.h"
+#include "some_functions.h"
 #include "robot.h"
 
 class Simulator{
     private:
+        clock_t filteringTime;
         static const int bufferSize = 1000;
         Robot *robot;
         std::vector<Eigen::Vector3d> robotTrueSpd_Buffer;
@@ -27,6 +29,7 @@ class Simulator{
         std::string timeUnity = "ms";
         double seconds2timeUnity = 1e3;
         const Eigen::IOFormat tableFormatTAB;
+        const std::string filterType = "kalman";
 
         std::string logFileName;
         static const vecEachSpdType<std::string> suffixes4logFile;
