@@ -77,6 +77,10 @@ void Robot::resetRobot() {
     lastVoltageCmd.setZero();   // @todo is this rly necessary?
 }
 
+Eigen::Vector4d Robot::getEncodersRead() const {
+    return lastEncodersRead;
+}
+
 Eigen::Vector4d Robot::getEstimatedWheelsSpd() const {
     return estimatedWheelsAngSpd;
 };
@@ -126,6 +130,12 @@ void Robot::applyFilter() {
     if( !hasFilter )
         debugBuffer << "NO FILTER\n\n";
     #endif
+}
+
+double Robot::getTotalSpentTimeFiltering() const {
+    if(hasFilter)
+        return filter->getTotalSpentTime();
+    return 0;
 }
 
 void Robot::updateRobotStatus(const Eigen::Vector4d &wheelsAngSpdCmd) {

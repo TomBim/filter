@@ -67,6 +67,8 @@ class Robot{
 
         void resetRobot();
 
+        Eigen::Vector4d getEncodersRead() const;
+
         Eigen::Vector4d getEstimatedWheelsSpd() const;
 
         Eigen::Vector4d getWheelsTrueSpd() const;
@@ -82,6 +84,9 @@ class Robot{
         void updateRobotStatus(const Eigen::Vector4d &wheelsAngSpdCmd);
 
         void updateRobotStatus(const Eigen::Vector3d &robotSpdCmd);
+
+        /// @return the total spent time for filtering (in seconds)
+        double getTotalSpentTimeFiltering() const;
 };
 
 #endif
