@@ -3,7 +3,7 @@
 
 #include <vector>
 
-enum class SpdType : int{ RobotTrue, RobotEstimation, WheelsTrue, WheelsRead, NTypes };
+enum class SpdType : int{ RobotTrue, RobotEstimation, WheelsTrue, WheelsEstimation, WheelsReadByEncoders, NTypes };
 
 // template function for vectors with a value for each speed type
 template <typename T>
