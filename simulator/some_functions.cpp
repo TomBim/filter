@@ -153,6 +153,8 @@ void multiply_A_BisymmetricMatrix(double **mtx, double **res, bool only2rows) {
     // }
 }
 
+#ifdef DBG_MODE
+
 void startDebugLog() {
     debugBuffer.clear();
     std::ofstream file;
@@ -182,6 +184,8 @@ void updateDebugLog() {
         debugBuffer.clear();
     }
 }
+
+#endif
 
 std::string formatMyVector(const myVector4d &vec) {
     std::stringstream ss;

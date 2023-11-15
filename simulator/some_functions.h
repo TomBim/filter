@@ -26,9 +26,11 @@ void progressBar(float progress);
 ///     A, B centrosymmetric -> A*B centrosymmetric
 void multBisymmetricMatrixes_4x4(double **A, double **B, double **res);
 
+#ifdef DBG_MODE
 void startDebugLog();
 
 void updateDebugLog();
+#endif
 
 std::string formatMyVector(const myVector4d &vec);
 
