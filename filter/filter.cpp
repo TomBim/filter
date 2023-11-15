@@ -1,6 +1,5 @@
 #include "filter.h"
 
-
 #ifdef FILTER_V_1_0
 
 
@@ -8,7 +7,34 @@
 // infoMatrix = 0 in the start, cool. But, then I have
 // to invert it?? It doesn't make sense.
 
+GaussianFilter::GaussianFilter(std::string type) : type(type) {
+    dt = 0;
+    totalSpentTime = 0;
+    mu.setZero();
+}
+
 GaussianFilter::~GaussianFilter() {}
+
+double GaussianFilter::getTotalSpentTime() const {
+    return totalSpentTime * 1.0 / CLOCKS_PER_SEC;
+}
+
+Eigen::Vector4d GaussianFilter::applyFilter(const Eigen::Vector4d &voltageCmd,
+        const Eigen::Vector4d &encodersRead) {
+    #ifdef DBG_MODE
+    debugBuffer << "### Type: " << type << "\n\n"
+        << "voltageCmd = " << voltageCmd.transpose() << "\n\n"
+        << "encodersRead = " << encodersRead.transpose() << "\n\n";
+    #endif
+
+    dt = clock();
+    predict(voltageCmd);
+    filtrate(encodersRead / N);
+    dt = clock() - dt;
+    totalSpentTime += dt;
+
+    return mu;
+}
 
 /*****************    K A L M A N    *****************/
 
@@ -45,20 +71,6 @@ void KalmanFilter::filtrate(const Eigen::Vector4d &obs) {
     #endif
 }
 
-Eigen::Vector4d KalmanFilter::applyFilter(const Eigen::Vector4d &voltageCmd,
-        const Eigen::Vector4d &encodersRead) {
-    #ifdef DBG_MODE
-    debugBuffer << "### Type: " << type << "\n\n"
-        << "voltageCmd = " << voltageCmd.transpose() << "\n\n"
-        << "encodersRead = " << encodersRead.transpose() << "\n\n";
-    #endif
-
-    predict(voltageCmd);
-    filtrate(encodersRead / N);
-
-    return mu;
-}
-
 Eigen::Vector4d KalmanFilter::getLastFilteredSpd() const {
     return mu;
 }
@@ -66,6 +78,8 @@ Eigen::Vector4d KalmanFilter::getLastFilteredSpd() const {
 void KalmanFilter::resetFilter() {
     mu.setZero();
     Sigma = MY_INFINITE * Eigen::Matrix4d::Identity();
+    dt = 0;
+    totalSpentTime = 0;
 }
 
 /*************    I N F O R M A T I O N    ***************/
@@ -92,13 +106,6 @@ void InfoFilter::filtrate(const Eigen::Vector4d &obs) {
     mu = infoMatrix_inv * infoVec;  // update mean state
 }
 
-Eigen::Vector4d InfoFilter::applyFilter(const Eigen::Vector4d &voltageCmd,
-        const Eigen::Vector4d &encodersRead) {
-    predict(voltageCmd);
-    filtrate(encodersRead / N);
-    return mu;
-}
-
 Eigen::Vector4d InfoFilter::getLastFilteredSpd() const {
     return mu;
 }
@@ -108,6 +115,8 @@ void InfoFilter::resetFilter() {
     infoMatrix.setZero();
     infoMatrix_inv = MY_INFINITE * Eigen::Matrix4d::Identity();
     mu.setZero();
+    dt = 0;
+    totalSpentTime = 0;
 }
 
 #endif
@@ -280,7 +289,7 @@ void GaussianFilter::A_MTX_At_plus_R(myMatrix4d &mtx, myMatrix4d &res) {
     A_MTX_At_plus_R_aux(mtx, res, mtx, false); 
 }
 
-void GaussianFilter::A_MTX_At_plus_R(myMatrix4d &mtx, myMatrix4d &res, myMatrix4d A_MTX) {
+void GaussianFilter::A_MTX_At_plus_R(myMatrix4d &mtx, myMatrix4d &res, myMatrix4d &A_MTX) {
     A_MTX_At_plus_R_aux(mtx, res, A_MTX, true);
 }
 
@@ -333,14 +342,15 @@ void GaussianFilter::invertBisymmetricMatrix(myMatrix4d &mtx, myMatrix4d &res) {
     // note:
     //      tr(mtx) = a + e + e + a = 2.(a + e)
     //      tr(mtx²) = 2.(a² + 2.b² + 2.c² + d² + e² + f²)
-    //      tr(mtx³) = 2 . [a.(a² + 3.b² + 3.c² + 3.d²) + 
-    //                       + e.(3.b² + 3.c² + e² + 3.f²)]
+    //      tr(mtx³) = 2 . [a.(a² + 3.d²) + e.(e² + 3f²) +
+    //                      3.(a + e).(b² + c²) + 6.b.c.(f + d)]
     double tr_mtx = 2.0 * (a + e);
 
     double tr_mtx2 = 2.0 * (a2 + d2 + e2 + f2 + 2.0*(b2 + c2));
 
-    double tr_mtx3 = 2.0 * (a * (a2 + 3.0*(b2 + c2 + d2)) \
-                            + e * (e2 + 3.0*(b2 + c2 + f2)));
+    double tr_mtx3 = 2.0 * (a * (a2 + 3.0*d2) + e * (e2 + 3.0*f2) \
+                            + 3.0 * (a + e) * (b2 + c2) \
+                            + 6.0*b*c*(d + f));
     
     
     // *** consts ***
@@ -505,6 +515,7 @@ Eigen::Vector4d GaussianFilter::applyFilter(const Eigen::Vector4d &voltageCmd,
     debugBuffer << "\n### Type: " << type << "\n"
         << "voltageCmd = " << voltageCmd.transpose() << "\n"
         << "encodersRead = " << encodersRead.transpose() << "\n";
+    debugBuffer << "mu = " << formatMyVector(mu) << "\n";
     #endif
 
     // eigen vector to myVector
@@ -570,14 +581,18 @@ inline void KalmanFilter::predict(const myVector4d &cmd) {
     double mu1 = mu.at(1);
     double mu2 = mu.at(2);
     double mu3 = mu.at(3);
+    double cmd0 = cmd.at(0);
+    double cmd1 = cmd.at(1);
+    double cmd2 = cmd.at(2);
+    double cmd3 = cmd.at(3);
     mu[0] = A11 * mu0 + A12 * mu1 + A13 * mu2 + A14 * mu3 \
-            + Bii * cmd.at(0);
+            + B11 * cmd0 + B12 * cmd1 + B13 * cmd2 + B14 * cmd3;
     mu[1] = A12 * mu0 + A22 * mu1 + A23 * mu2 + A13 * mu3 \
-            + Bii * cmd.at(1);
+            + B12 * cmd0 + B22 * cmd1 + B23 * cmd2 + B13 * cmd3;
     mu[2] = A13 * mu0 + A23 * mu1 + A22 * mu2 + A12 * mu3 \
-            + Bii * cmd.at(2);
+            + B13 * cmd0 + B23 * cmd1 + B22 * cmd2 + B12 * cmd3;
     mu[3] = A14 * mu0 + A13 * mu1 + A12 * mu2 + A11 * mu3 \
-            + Bii * cmd.at(3);
+            + B14 * cmd0 + B13 * cmd1 + B12 * cmd2 + B11 * cmd3;
 
     // Sigma = A*Sigma*At + R
     // Sigma is bisymmetric
@@ -799,13 +814,30 @@ void InfoFilter::resetFilter() {
     // One can notice that, if we use Omega_posteriori(t=0) = 0, we have:
     //      Omega_posteriori(t=1) = Ct . Qinv . C
     // Therefore, we can initialize with that, instead of infinite.
-    for(int i = 0; i < 4; i++)
+    for(int i = 0; i < 4; i++) {
+        posterioriInfoMatrix_inv[i].fill(0);
         posterioriInfoMatrix_inv[i][i] = CQinvC_ii;
+    }
     infoVec.fill(0);
     mu.fill(0);
 }
 
 inline void InfoFilter::predict(const myVector4d &cmd) {
+    #ifdef DBG_MODE
+    debugBuffer << "\n#### Predicting\n";
+    debugBuffer << "infoVec = " << formatMyVector(infoVec) << "\n"
+        << "infoMatrix[0,:] = " << formatMyMatrixOneRow(infoMatrix, 0) << "\n";
+    
+    myVector4d muaux;
+    for(int i = 0; i < 4; i++) {
+        double mu_i = 0;
+        for(int k = 0; k < 4; k++)
+            mu_i += infoMatrix[i][k] * infoVec.at(k);
+        muaux[i] = mu_i;
+    }
+    debugBuffer << "mu = " << formatMyVector(mu) << "\n";
+    #endif
+
     // newOmega = (A . Omega_inv . At  +  R)^-1
     // newCsi = newOmega . (A . Omega_inv . csi  +  B.u)
 
@@ -814,7 +846,9 @@ inline void InfoFilter::predict(const myVector4d &cmd) {
     A_MTX_At_plus_R(posterioriInfoMatrix_inv, prioriInfoMatrix_inv, auxMatrix);
     invertBisymmetricMatrix(prioriInfoMatrix_inv, infoMatrix);
 
-    // auxVec = (A . Omega_inv . csi   +  B.u)
+    // auxVec = A . Omega_inv . csi
+    //          ^-----v-----^
+    //            auxMatrix 
     double csi1 = infoVec.at(0);
     double csi2 = infoVec.at(1);
     double csi3 = infoVec.at(2);
@@ -825,38 +859,66 @@ inline void InfoFilter::predict(const myVector4d &cmd) {
         double aOmegaInv2 = auxMatrix[0][1];
         double aOmegaInv3 = auxMatrix[0][2];
         double aOmegaInv4 = auxMatrix[0][3];
-        auxVec_1 = aOmegaInv1 * csi1 + aOmegaInv2 * csi2 + aOmegaInv3 * csi3 + aOmegaInv4 * csi4 \
-                   + Bii * cmd.at(0);
-        auxVec_4 = aOmegaInv4 * csi1 + aOmegaInv3 * csi2 + aOmegaInv2 * csi3 + aOmegaInv1 * csi4 \
-                   + Bii * cmd.at(3);
+        auxVec_1 = aOmegaInv1 * csi1 + aOmegaInv2 * csi2 + aOmegaInv3 * csi3 + aOmegaInv4 * csi4;
+        auxVec_4 = aOmegaInv4 * csi1 + aOmegaInv3 * csi2 + aOmegaInv2 * csi3 + aOmegaInv1 * csi4;
 
         // auxVec: second and third elements
         aOmegaInv1 = auxMatrix[1][0];
         aOmegaInv2 = auxMatrix[1][1];
         aOmegaInv3 = auxMatrix[1][2];
         aOmegaInv4 = auxMatrix[1][3];
-        auxVec_2 = aOmegaInv1 * csi1 + aOmegaInv2 * csi2 + aOmegaInv3 * csi3 + aOmegaInv4 * csi4 \
-                   + Bii * cmd.at(1);
-        auxVec_3 = aOmegaInv4 * csi1 + aOmegaInv3 * csi2 + aOmegaInv2 * csi3 + aOmegaInv1 * csi4 \
-                   + Bii * cmd.at(2);
+        auxVec_2 = aOmegaInv1 * csi1 + aOmegaInv2 * csi2 + aOmegaInv3 * csi3 + aOmegaInv4 * csi4;
+        auxVec_3 = aOmegaInv4 * csi1 + aOmegaInv3 * csi2 + aOmegaInv2 * csi3 + aOmegaInv1 * csi4;
 
-    // update csi
-    double omega1 = infoMatrix[0][0];
-    double omega2 = infoMatrix[0][1];
-    double omega3 = infoMatrix[0][2];
-    double omega4 = infoMatrix[0][3];
-    infoVec[0] = omega1 * auxVec_1 + omega2 * auxVec_2 + omega3 * auxVec_3 + omega4 * auxVec_4;
-    infoVec[3] = omega4 * auxVec_1 + omega3 * auxVec_2 + omega2 * auxVec_3 + omega1 * auxVec_4;
+    // auxVec = A . Omega_inv . csi  +  B.u
+    //          ^--------v--------^
+    //                old auxVec
+    double cmd0 = cmd.at(0);
+    double cmd1 = cmd.at(1);
+    double cmd2 = cmd.at(2);
+    double cmd3 = cmd.at(3);
+    auxVec_1 += B11 * cmd0 + B12 * cmd1 + B13 * cmd2 + B14 * cmd3;
+    auxVec_2 += B12 * cmd0 + B22 * cmd1 + B23 * cmd2 + B13 * cmd3;
+    auxVec_3 += B13 * cmd0 + B23 * cmd1 + B22 * cmd2 + B12 * cmd3;
+    auxVec_4 += B14 * cmd0 + B13 * cmd1 + B12 * cmd2 + B11 * cmd3;
 
-    omega1 = omega2;
-    omega4 = omega3;
-    omega2 = infoMatrix[1][1];
-    omega3 = infoMatrix[1][2];
-    infoVec[1] = omega1 * auxVec_1 + omega2 * auxVec_2 + omega3 * auxVec_3 + omega4 * auxVec_4;
-    infoVec[2] = omega4 * auxVec_1 + omega3 * auxVec_2 + omega2 * auxVec_3 + omega1 * auxVec_4;
+    // update csi:
+    //      newcsi = newOmega.(A . Omega_inv . csi  +  B.u)
+    //                        ^-------------vv------------^
+    //                                    auxVec
+    double w1 = infoMatrix[0][0];
+    double w2 = infoMatrix[0][1];
+    double w3 = infoMatrix[0][2];
+    double w4 = infoMatrix[0][3];
+    infoVec[0] = w1 * auxVec_1 + w2 * auxVec_2 + w3 * auxVec_3 + w4 * auxVec_4;
+    infoVec[3] = w4 * auxVec_1 + w3 * auxVec_2 + w2 * auxVec_3 + w1 * auxVec_4;
+
+    w1 = w2;
+    w4 = w3;
+    w2 = infoMatrix[1][1];
+    w3 = infoMatrix[1][2];
+    infoVec[1] = w1 * auxVec_1 + w2 * auxVec_2 + w3 * auxVec_3 + w4 * auxVec_4;
+    infoVec[2] = w4 * auxVec_1 + w3 * auxVec_2 + w2 * auxVec_3 + w1 * auxVec_4;
+
+    #ifdef DBG_MODE
+    debugBuffer << "infoVec* = " << formatMyVector(infoVec) << "\n"
+        << "infoMatrix*[0,:] = " << formatMyMatrixOneRow(infoMatrix, 0) << "\n";    
+
+
+    for(int i = 0; i < 4; i++) {
+        double mu_i = 0;
+        for(int k = 0; k < 4; k++)
+            mu_i += infoMatrix[i][k] * infoVec.at(k);
+        muaux[i] = mu_i;
+    }
+    debugBuffer << "mu* = " << formatMyVector(mu) << "\n";
+    #endif
 }
 
 inline void InfoFilter::filtrate(const myVector4d &obs) {
+    #ifdef DBG_MODE
+    debugBuffer << "#### Filtrating\n\n";
+    #endif
     // newOmega = Omega + Ct . Q_inv . C
     // newCsi = csi + Ct . Q_inv . z
     
@@ -890,9 +952,9 @@ inline void InfoFilter::filtrate(const myVector4d &obs) {
         double omegaInv_3 = posterioriInfoMatrix_inv[0][2];
         double omegaInv_4 = posterioriInfoMatrix_inv[0][3];
 
-        mu[0] = omegaInv_1 * infoVec1 * omegaInv_2 * infoVec2 \
+        mu[0] = omegaInv_1 * infoVec1 + omegaInv_2 * infoVec2 \
                 + omegaInv_3 * infoVec3 + omegaInv_4 * infoVec4;
-        mu[3] = omegaInv_4 * infoVec1 * omegaInv_3 * infoVec2 \
+        mu[3] = omegaInv_4 * infoVec1 + omegaInv_3 * infoVec2 \
                 + omegaInv_2 * infoVec3 + omegaInv_1 * infoVec4;
 
         // second and third elements
@@ -901,10 +963,17 @@ inline void InfoFilter::filtrate(const myVector4d &obs) {
         omegaInv_2 = posterioriInfoMatrix_inv[1][1];
         omegaInv_3 = posterioriInfoMatrix_inv[1][2];
 
-        mu[1] = omegaInv_1 * infoVec1 * omegaInv_2 * infoVec2 \
+        mu[1] = omegaInv_1 * infoVec1 + omegaInv_2 * infoVec2 \
                 + omegaInv_3 * infoVec3 + omegaInv_4 * infoVec4;
-        mu[2] = omegaInv_4 * infoVec1 * omegaInv_3 * infoVec2 \
+        mu[2] = omegaInv_4 * infoVec1 + omegaInv_3 * infoVec2 \
                 + omegaInv_2 * infoVec3 + omegaInv_1 * infoVec4;
+
+    #ifdef DBG_MODE
+    debugBuffer << "infoVec = " << formatMyVector(infoVec) << "\n"
+        << "infoMatrix[0,:] = " << formatMyMatrixOneRow(infoMatrix, 0) << "\n"
+        << "posterioriInfoMatrix_inv[0,:] = " << formatMyMatrixOneRow(posterioriInfoMatrix_inv, 0) << "\n"
+        << "mu = " << formatMyVector(mu) << "\n";
+    #endif
 }
 
 #endif
