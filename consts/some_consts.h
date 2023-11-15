@@ -7,14 +7,25 @@
 #include <string>
 #include <iostream>
 
-#define DBG_MODE
 
 const double PI = 3.1415926536;
 const double deg2rad = PI / 180.0;
-const double MY_INFINITE = 1.0e9;
+const double MY_INFINITE = 1.0e6;
+
+
+#ifdef NO_FILTER
+    const std::string FILTER_TYPE = "";
+#elif KALMAN
+    const std::string FILTER_TYPE = "kalman";
+#elif INFO
+    const std::string FILTER_TYPE = "info";
+#else
+    const std::string FILTER_TYPE = "";
+#endif
+
 
 #ifdef DBG_MODE
-const std::string LOG_MD_PATH = "/mnt/c/Users/tombim/Onedrive/Bureau/log.md";
+const std::string LOG_MD_PATH = "/mnt/c/Users/tombim/Onedrive/Bureau/" + FILTER_TYPE + "log.md";
 #endif
 
 
@@ -98,13 +109,13 @@ namespace myArray {
         {1.301876985722949e-02, -1.081038257466952e-02,  9.611513532313621e-03,  9.824336133474945e-01}
     }};
 
-    static const double Cvii = Beq + K*K + N*N * eta / RES_MOTOR;
-    static const double Bii = (N * eta * K / RES_MOTOR) * Cvii;
+    static const double Cvii = Beq + K*K * N*N * eta / RES_MOTOR;
+    static const double Baux = N * eta * K / RES_MOTOR / Cvii;
     constexpr myMatrix4d B = {{
-        {Bii, 0, 0, 0},
-        {0, Bii, 0, 0},
-        {0, 0, Bii, 0},
-        {0, 0, 0, Bii}
+        {(1 - A[0][0]) * Baux,     -A[0][1]    * Baux,     -A[0][2]    * Baux,     -A[0][3]    * Baux},
+        {  -A[1][0]    * Baux,   (1 - A[1][1]) * Baux,     -A[1][2]    * Baux,     -A[1][3]    * Baux},
+        {  -A[2][0]    * Baux,     -A[2][1]    * Baux,   (1 - A[2][2]) * Baux,     -A[2][3]    * Baux},
+        {  -A[3][0]    * Baux,     -A[3][1]    * Baux,     -A[3][2]    * Baux,   (1 - A[3][3]) * Baux}
     }};
 
     static const double Cii = 1;
