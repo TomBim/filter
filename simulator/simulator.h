@@ -15,26 +15,35 @@
 #include "cmd_signal.h"
 #include "some_functions.h"
 #include "robot.h"
+#include "perf_measurers.h"
 
 class Simulator{
     private:
-        clock_t filteringTime;
-        static const int bufferSize = 1000;
+        // robot
         Robot *robot;
+        const std::string filterType = FILTER_TYPE;
+
+        // buffers
+        static const int bufferSize = 1000;
         std::vector<Eigen::Vector3d> robotTrueSpd_Buffer;
-        std::vector<Eigen::Vector3d> robotReadSpd_Buffer;
+        std::vector<Eigen::Vector3d> robotEstimSpd_Buffer;
         std::vector<Eigen::Vector4d> wheelsTrueSpd_Buffer;
+        std::vector<Eigen::Vector4d> wheelsEstimSpd_Buffer;
         std::vector<Eigen::Vector4d> wheelsReadSpd_Buffer;
         std::vector<double> timeBuffer;
+
+        // performance measurers
+        PerformanceMeasurers *perfMeasurers;
+
+        const Eigen::IOFormat tableFormatTAB;
+
+        // variables for log files
+        static const vecEachSpdType<std::string> suffixes4logFile;
+        static const vecEachSpdType<std::string> logFileHeaders;
+        std::string preffix4logFile;
+        vecEachSpdType<std::string> fileNames;
         std::string timeUnity = "ms";
         double seconds2timeUnity = 1e3;
-        const Eigen::IOFormat tableFormatTAB;
-        const std::string filterType = "kalman";
-
-        std::string logFileName;
-        static const vecEachSpdType<std::string> suffixes4logFile;
-        vecEachSpdType<std::string> fileNames;
-        static const vecEachSpdType<std::string> logFileHeaders;
 
 
         std::string createName4Log();
@@ -74,6 +83,12 @@ class Simulator{
 
         /// @brief creates the log files and prints the headers on them 
         void startLogFiles();
+
+        void updatePerfMeasures();
+
+        void restartPerfMeasures();
+
+        void printPerfMeasuresOnFile() const;
     public:
         Simulator();
 
@@ -83,9 +98,9 @@ class Simulator{
         /// for a certain duration and write the results
         /// in a log file
         /// @param duration in seconds
-        /// @param logFileName name of the file you want to create it (without extension)
+        /// @param preffix4logFile name of the file you want to create it (without extension)
         /// @param cmd4wheels sugou
-        void simulateFor(double duration, const std::string logFileName, const CmdSignal &cmdSignal);
+        void simulateFor(double duration, const std::string preffix4logFile, const CmdSignal &cmdSignal);
 
         /// @brief use this function to run the simulation
         /// for a certain duration. The function will
