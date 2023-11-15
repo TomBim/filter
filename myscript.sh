@@ -1,8 +1,8 @@
 echo "****  LES GO! LES BUILD IT!  *****"
 
 cd build
-#rm CMakeCache.txt
-cmake -GNinja ..
+rm CMakeCache.txt
+cmake -GNinja .. -DKALMAN=1 -DFILTER_V_MAJOR=2 -DFILTER_V_MINOR=0
 
 echo ""
 echo "*****   NINJA NELES!!!   *****"
