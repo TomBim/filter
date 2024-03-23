@@ -14,7 +14,7 @@ for filterDirective in "${filterDirectives[@]}"; do
     echo "****  LES GO! LES BUILD IT!  *****"
 
     cd build
-    rm * -r
+    rm CMakeCache.txt
     cmake -GNinja --log-level=WARNING .. ${filterDirective}
 
     echo ""

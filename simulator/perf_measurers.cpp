@@ -22,13 +22,15 @@ Eigen::Vector3d PerformanceMeasurers::getMSE_robot() const {
 
 void PerformanceMeasurers::putWheelsEstim(const Eigen::Vector4d &estimation, 
         const Eigen::Vector4d &trueValue) {
-    MSEwheels_sum += (estimation - trueValue).cwisePow(2);
+    Eigen::Vector4d error = estimation - trueValue;
+    MSEwheels_sum += error.cwiseProduct(error); // error squared
     MSEwheels_n++;
 }
 
 void PerformanceMeasurers::putRobotEstim(const Eigen::Vector3d &estimation,
         const Eigen::Vector3d &trueValue) {
-    MSErobot_sum += (estimation - trueValue).cwisePow(2);
+    Eigen::Vector3d error = estimation - trueValue;
+    MSErobot_sum += error.cwiseProduct(error); // error squared
     MSErobot_n++;
 }
 

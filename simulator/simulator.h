@@ -1,6 +1,7 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
+#include <filesystem>
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -9,6 +10,7 @@
 #include <ctime>
 #include <vector>
 #include <iomanip>
+namespace fs = std::filesystem;
 
 #include "../consts/some_consts.h"
 #include "spd_types.h"
@@ -83,6 +85,11 @@ class Simulator{
 
         /// @brief creates the log files and prints the headers on them 
         void startLogFiles();
+
+        /// @brief check if the folder already exists. If not, it creates
+        /// the folder
+        /// @param folderName name of the folder
+        void createFolder(const std::string &folderName);
 
         void updatePerfMeasures();
 

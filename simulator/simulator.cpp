@@ -19,6 +19,7 @@ std::string Simulator::createName4Log() {
 
     std::ostringstream folder;
     folder << "results/";
+    createFolder(folder.str());
     if(filterType == "info") 
         #ifdef FILTER_V_2_0
         folder << "IFv2/";
@@ -33,8 +34,15 @@ std::string Simulator::createName4Log() {
         #endif
     else
         folder << "noFilter/";
+    createFolder(folder.str());
 
     return folder.str() + date.str() + "-" + hour.str();
+}
+
+void Simulator::createFolder(const std::string &folderName) {
+    const fs::path folderPath{folderName};
+    if (!fs::exists(folderPath))
+        fs::create_directory(folderPath);
 }
 
 void Simulator::bufferize(int bufferPos, double timeNow) {
